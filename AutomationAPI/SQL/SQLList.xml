@@ -1,0 +1,322 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Commands>
+  <SQLList Id="getWIPData">
+    <Sql Type ="Text" ReturnType="DataTable" TableName="getWIPData">
+      <Text>
+		  WITH BOM(CHMCD,PHMCD,LEVEL) as(
+			SELECT MPCHNC,MPPHNC,1 FROM MMPRSEP WHERE MPPHNC LIKE ? || '%'  AND MPCHTP IN ('03','08','04') AND MPPHTP = '01'
+			UNION ALL 
+			SELECT MPCHNC,MPPHNC,LEVEL+1 FROM MMPRSEP INNER JOIN BOM ON MPPHNC = CHMCD  WHERE MPCHTP IN ('03','08','04')
+			)
+			SELECT ZHHMC6 MPN,ZHEITM FullItemCode,LEVEL,ZHEKOT ProcessCode,ZHTJYN+0 ProcessNo,SUM(ZHOQTY) Quantity,(SELECT MAX(MIKODO) MIKODO FROM MMITEMP WHERE MIDHCD LIKE ZHHMC6 || '%') Koto, SUM(CASE ZIOPTI WHEN '1' THEN ZHOQTY ELSE 0 END) Onhold
+			FROM MZSODRP 
+			INNER JOIN (SELECT DISTINCT LEFT(CHMCD,6)||'%'||RIGHT(CHMCD,4) CHMCD,MIN(LEVEL) LEVEL FROM BOM GROUP BY CHMCD) BOM ON ZHEITM LIKE CHMCD
+			LEFT JOIN MZILOTP ON ZHSZNO = ZISZNO AND ZHLTNO = ZILTNO AND ZIOPTI = '1'
+			WHERE ZHSTC2 = 1 AND ZHHMTP &lt;&gt; '07'
+			GROUP BY ZHHMC6,ZHEITM,ZHEKOT,ZHTJYN,LEVEL
+	  </Text>
+      <Parameters>
+		<Parameter Name = "MPN">
+			<Type>Char</Type>
+			<MaxLen>6</MaxLen>
+			<Direction>Input</Direction>
+		</Parameter>
+      </Parameters>
+    </Sql>
+  </SQLList>
+	<SQLList Id="getMPNLotSize">
+    <Sql Type ="Text" ReturnType="DataTable" TableName="getMPNLotSize">
+      <Text>
+		  SELECT MILTSZ, MIKODO FROM MMITEMP WHERE MIHMCD LIKE ? || '%' AND  MITYPE ='01' ORDER BY MIETDT DESC FETCH FIRST 1 ROWS ONLY
+	  </Text>
+      <Parameters>
+		<Parameter Name = "MPN">
+			<Type>Char</Type>
+			<MaxLen>6</MaxLen>
+			<Direction>Input</Direction>
+		</Parameter>
+      </Parameters>
+    </Sql>
+  </SQLList>
+	<SQLList Id="getWMProcess">
+		<Sql Type ="Text" ReturnType="DataTable" TableName="getWMProcess">
+			<Text>
+				select *
+				from WMProcess
+				where RootPath like @MPN + '%;' + @HMCD + '%'
+			</Text>
+			<Parameters>
+				<Parameter Name="MPN">
+				  <Type>AnsiString</Type>
+				  <MaxLen>9</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+				<Parameter Name="HMCD">
+				  <Type>AnsiString</Type>
+				  <MaxLen>11</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+			</Parameters>
+		</Sql>
+	</SQLList>
+	<SQLList Id="deleteWMProcess">
+		<Sql Type ="Text" ReturnType="int" TableName="deleteWMProcess">
+			<Text>
+				delete from WMProcess where RootPath like @RootPath+'/%' or RootPath = @RootPath
+			</Text>
+			<Parameters>
+				<Parameter Name="RootPath">
+				  <Type>AnsiString</Type>
+				  <MaxLen>200</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+			</Parameters>
+		</Sql>
+	</SQLList>
+	<SQLList Id="getWMProject">
+		<Sql Type ="Text" ReturnType="DataTable" TableName="getWMProject">
+			<Text>
+				select * from WMProject where (CustProject = @CustProject or @CustProject = 'ALL') and (MPN = @MPN or @MPN = 'ALL')
+			</Text>
+			<Parameters>
+				<Parameter Name="CustProject">
+				  <Type>AnsiString</Type>
+				  <MaxLen>50</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+				<Parameter Name="MPN">
+				  <Type>AnsiString</Type>
+				  <MaxLen>6</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+			</Parameters>
+		</Sql>
+	</SQLList>
+	<SQLList Id="deleteWMProject">
+		<Sql Type ="Text" ReturnType="DataTable" TableName="deleteWMProject">
+			<Text>
+				delete from WMProject
+			</Text>
+			<Parameters>
+			</Parameters>
+		</Sql>
+	</SQLList>
+	<SQLList Id="getWMIOData">
+		<Sql Type ="Text" ReturnType="DataTable" TableName="getWMIOData">
+			<Text>
+				select * from WMIOData where (Project+FlexName = @Project or @Project = 'ALL') and (PlanDate  &gt;= @PlanDateFrom or @PlanDateFrom is null) and (PlanDate &lt;= @PlanDateTo or @PlanDateTo is null)
+			</Text>
+			<Parameters>
+				<Parameter Name="Project">
+				  <Type>AnsiString</Type>
+				  <MaxLen>50</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+				<Parameter Name="PlanDateFrom">
+				  <Type>DateTime</Type>
+				  <MaxLen>20</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+				<Parameter Name="PlanDateTo">
+				  <Type>DateTime</Type>
+				  <MaxLen>20</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+			</Parameters>
+		</Sql>
+	</SQLList>
+	<SQLList Id="deleteWMIOData">
+		<Sql Type ="Text" ReturnType="DataTable" TableName="deleteWMIOData">
+			<Text>
+				delete from WMIOData where PlanDate >= @PlanDate and Project = @Project and FlexName = @FlexName
+			</Text>
+			<Parameters>
+				<Parameter Name="Project">
+				  <Type>AnsiString</Type>
+				  <MaxLen>50</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+				<Parameter Name="FlexName">
+				  <Type>AnsiString</Type>
+				  <MaxLen>50</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+				<Parameter Name="PlanDate">
+				  <Type>DateTime</Type>
+				  <MaxLen>11</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+			</Parameters>
+		</Sql>
+	</SQLList>
+	<SQLList Id="getMPN">
+		<Sql Type ="Text" ReturnType="DataTable" TableName="getMPN">
+			<Text>
+				SELECT DISTINCT MPN FROM WMProcess ORDER BY MPN
+			</Text>
+			<Parameters>
+			</Parameters>
+		</Sql>
+	</SQLList>
+	<SQLList Id="getFinishGoods">
+		<Sql Type ="Text" ReturnType="DataTable" TableName="getFinishGoods">
+			<Text>
+				SELECT DISTINCT MPN FROM WMProject ORDER BY MPN
+			</Text>
+			<Parameters>
+			</Parameters>
+		</Sql>
+	</SQLList>
+	<SQLList Id="getTemplateWMProcess">
+		<Sql Type ="Text" ReturnType="DataTable" TableName="getTemplateWMProcess">
+			<Text>
+				WITH BOM(SEQN,TEJN,CHMCD,PHMCD,LEVEL,RootPath,MPN,IsEnd) as(
+				SELECT MPSEQN,MPTEJN,MPCHNC,MPPHNC,1,cast(MPPHNC||';'||MPCHNC as varchar(1000)),LEFT(MPPHNC,6),(SELECT 0 FROM MMPRSEP B WHERE B.MPPHNC = A.MPCHNC AND B.MPCHTP IN ('03','08','04') FETCH FIRST 1 ROWS ONLY) FROM MMPRSEP A WHERE MPPHNC LIKE  ? || '%'  AND MPCHTP IN ('03','08','04') AND MPPHTP = '01' AND MPCHNC LIKE  ? || '%'
+				UNION ALL 
+				SELECT MPSEQN,MPTEJN,MPCHNC,MPPHNC,LEVEL+1,RootPath||';'||MPCHNC,MPN,(SELECT 0 FROM MMPRSEP B WHERE B.MPPHNC = A.MPCHNC AND B.MPCHTP IN ('03','08','04') FETCH FIRST 1 ROWS ONLY) FROM MMPRSEP A INNER JOIN BOM ON MPPHNC = CHMCD  WHERE MPCHTP IN ('03','08','04')
+				)
+				SELECT MPN, CHMCD ItemCode,LEVEL,case MJNOKT when '' then '0' else MJNOKT end ProcessNo, MJTJKT ProcessCode, EBNAME Description,trim(RootPath)||'/'||TEJN||RIGHT('0000'||SEQN,4) RootPath, CASE WHEN isEnd IS NULL THEN 1 ELSE 0 END IsEnd
+				FROM BOM a 
+				INNER JOIN MMKTJEP ON CHMCD = MJHNCD  
+				INNER JOIN EBTTBGP ON EBCODE = MJTJKT
+			</Text>
+			<Parameters>
+				<Parameter Name="MPN">
+				  <Type>Char</Type>
+				  <MaxLen>9</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+				<Parameter Name="HMCD">
+				  <Type>Char</Type>
+				  <MaxLen>11</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+			</Parameters>
+		</Sql>
+	</SQLList>
+	<SQLList Id="getInterOnhand">
+		<Sql Type ="Text" ReturnType="DataTable" TableName="getInterOnhand">
+			<Text>
+				WITH BOM(CHMCD,PHMCD,LEVEL) as(
+				SELECT MPCHNC,MPPHNC,1 FROM MMPRSEP WHERE MPPHNC LIKE ?||'%'  AND MPCHTP IN ('03','08','04') AND MPPHTP = '01'
+				UNION ALL 
+				SELECT MPCHNC,MPPHNC,LEVEL+1 FROM MMPRSEP INNER JOIN BOM ON MPPHNC = CHMCD  WHERE MPCHTP IN ('03','08','04')
+				)
+				SELECT SUM(BRYUKS) BRYUKS FROM MZBROLP LEFT JOIN MMITEMP ON MIHMCD = BRZAIR WHERE
+				BRZAIR LIKE (SELECT LEFT(CHMCD,6)||'%'||RIGHT(CHMCD,4) FROM BOM WHERE LEVEL=2 ORDER BY PHMCD DESC FETCH FIRST 1 ROWS ONLY)||'%' AND BREFLG ='' 
+			</Text>
+			<Parameters>
+				<Parameter Name="MPN">
+				  <Type>Char</Type>
+				  <MaxLen>6</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+			</Parameters>
+		</Sql>
+	</SQLList>
+	<SQLList Id="getFGOnhand">
+		<Sql Type ="Text" ReturnType="DataTable" TableName="getFGOnhand">
+			<Text>
+				SELECT SUM(ZFZQTY) FROM MZPZAFP WHERE ZFHMCD LIKE ?||'%' AND ZFBASY ='1'
+			</Text>
+			<Parameters>
+				<Parameter Name="MPN">
+				  <Type>Char</Type>
+				  <MaxLen>1000</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+			</Parameters>
+		</Sql>
+	</SQLList>
+	<SQLList Id="getCalendarDates">
+		<Sql Type ="Text" ReturnType="DataTable" TableName="getCalendarDates">
+			<Text>
+				SELECT * FROM MMCALMP WHERE MBBMNC='0000' AND MBDATE BETWEEN ? AND ? 
+			</Text>
+			<Parameters>
+				<Parameter Name="FromYear">
+				  <Type>Char</Type>
+				  <MaxLen>4</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+				<Parameter Name="ToYear">
+				  <Type>Char</Type>
+				  <MaxLen>4</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+			</Parameters>
+		</Sql>
+	</SQLList>
+	<SQLList Id="getWIPData2">
+	<Sql Type ="Text" ReturnType="DataTable" TableName="getWIPData2">
+      <Text>
+		  WITH BOM(CHMCD,PHMCD,LEVEL) as(
+			SELECT MPCHNC,MPPHNC,1 FROM MMPRSEP WHERE ? LIKE '%'||LEFT(MPPHNC,6)||',%' AND MPCHTP IN ('03','08','04') AND MPPHTP = '01'
+			UNION ALL 
+			SELECT MPCHNC,MPPHNC,LEVEL+1 FROM MMPRSEP INNER JOIN BOM ON MPPHNC = CHMCD  WHERE MPCHTP IN ('03','08','04')
+			)
+			SELECT ZHHMC6 MPN,ZHEITM FullItemCode,LEVEL,ZHEKOT ProcessCode,ZHTJYN+0 ProcessNo,SUM(ZHOQTY) Quantity,(SELECT MAX(MIKODO) MIKODO FROM MMITEMP WHERE MIDHCD LIKE ZHHMC6 || '%') Koto, SUM(CASE ZIOPTI WHEN '1' THEN ZHOQTY ELSE 0 END) Onhold
+			FROM MZSODRP 
+			INNER JOIN (SELECT DISTINCT LEFT(CHMCD,6)||'%'||RIGHT(CHMCD,4) CHMCD,MIN(LEVEL) LEVEL FROM BOM GROUP BY CHMCD) BOM ON ZHEITM LIKE CHMCD
+			LEFT JOIN MZILOTP ON ZHSZNO = ZISZNO AND ZHLTNO = ZILTNO AND ZIOPTI = '1'
+			WHERE ZHSTC2 = 1 AND ZHHMTP &lt;&gt; '07'
+			GROUP BY ZHHMC6,ZHEITM,ZHEKOT,ZHTJYN,LEVEL
+	  </Text>
+      <Parameters>
+		<Parameter Name="MPN">
+			<Type>VarChar</Type>
+			<MaxLen>1000</MaxLen>
+			<Direction>Input</Direction>
+		</Parameter>
+      </Parameters>
+    </Sql>
+  </SQLList>
+	<SQLList Id="getWMProcess2">
+		<Sql Type ="Text" ReturnType="DataTable" TableName="getWMProcess2">
+			<Text>
+				SELECT * FROM WMProcess WHERE MPN IN (SELECT LI.COL.value('MPN[1]','varchar(6)') FROM @MPNList.nodes('/XML/MPNList') LI(COL))
+			</Text>
+			<Parameters>
+				<Parameter Name="MPNList">
+				  <Type>Xml</Type>
+				  <MaxLen>0</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+			</Parameters>
+		</Sql>
+	</SQLList>
+	<SQLList Id="getFGOnhand2">
+		<Sql Type ="Text" ReturnType="DataTable" TableName="getFGOnhand2">
+			<Text>
+				SELECT SUM(ZFZQTY) FROM MZPZAFP WHERE  ? LIKE '%'||LEFT(ZFHMCD,6)||',%' AND ZFBASY ='1'
+			</Text>
+			<Parameters>
+				<Parameter Name="MPNList">
+				  <Type>VarChar</Type>
+				  <MaxLen>1000</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+			</Parameters>
+		</Sql>
+	</SQLList>
+	<SQLList Id="getInterOnhand2">
+		<Sql Type ="Text" ReturnType="DataTable" TableName="getInterOnhand2">
+			<Text>
+				WITH BOM(CHMCD,PHMCD,LEVEL) as(
+				SELECT MPCHNC,MPPHNC,1 FROM MMPRSEP WHERE ? LIKE '%'||LEFT(MPPHNC,6)||',%' AND MPCHTP IN ('03','08','04') AND MPPHTP = '01'
+				UNION ALL 
+				SELECT MPCHNC,MPPHNC,LEVEL+1 FROM MMPRSEP INNER JOIN BOM ON MPPHNC = CHMCD  WHERE MPCHTP IN ('03','08','04')
+				)
+				SELECT SUM(BRYUKS) BRYUKS FROM MZBROLP LEFT JOIN MMITEMP ON MIHMCD = BRZAIR WHERE
+				BRZAIR LIKE (SELECT LEFT(CHMCD,6)||'%'||RIGHT(CHMCD,4) FROM BOM WHERE LEVEL=2 ORDER BY PHMCD DESC FETCH FIRST 1 ROWS ONLY)||'%' AND BREFLG ='' 
+			</Text>
+			<Parameters>
+				<Parameter Name="MPNList">
+				  <Type>VarChar</Type>
+				  <MaxLen>1000</MaxLen>
+				  <Direction>Input</Direction>
+				</Parameter>
+			</Parameters>
+		</Sql>
+	</SQLList>
+</Commands>
